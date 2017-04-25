@@ -60,6 +60,8 @@ TIM_HandleTypeDef        TimHandle;
 void TIM6_DAC_IRQHandler(void);
 /* Private functions ---------------------------------------------------------*/
 
+extern uint32_t tim6_at_isr;
+
 /**
   * @brief  This function configures the TIM6 as a time base source. 
   *         The time source is configured  to have 1ms time base with a dedicated 
@@ -175,8 +177,10 @@ void HAL_TIM_PeriodElapsedCallback(__attribute__((unused)) TIM_HandleTypeDef *ht
 void TIM6_DAC_IRQHandler(void)
 {
 	static uint8_t ctr = 0;
-
 	portBASE_TYPE xHigherPriorityTaskWoken;
+
+	tim6_at_isr = TIM6->CNT;
+
 	if(ISTSemaphore)
 	{
 		if( (ctr++) >= 100)

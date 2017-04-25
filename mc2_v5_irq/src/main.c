@@ -19,9 +19,12 @@
 #include "Lcd.h"
 #include "stm32f429i_discovery_lcd.h"
 
+#define PINK (0xff<<24) | (0xd6<<16) | (0x64<<8) | (0xbe<<0)
 #define BLUE (0xff<<24) | (0x00<<16) | (0x00<<8) | (0xff<<0)
 #define RED (0xff<<24) | (0xff<<16) | (0x00<<8) | (0x00<<0)
 #define BLACK (0xff<<24) | (0x00<<16) | (0x00<<8) | (0x00<<0)
+
+#define RGB_TO_ARGB(x) ( (0xff<<24) | ( x ) )
 
 /* mm: added helper variable to support FreeRTOS thread list support in gdb
  * Remark: OpenOCD gdbserver references xTopReadyPriority which was removed in newer FreeRTOS releases.
@@ -30,6 +33,8 @@ const int __attribute__((used)) uxTopUsedPriority = configMAX_PRIORITIES;
 
 SemaphoreHandle_t LCDSemaphore;
 extern SemaphoreHandle_t ISTSemaphore;
+uint32_t tim6_at_isr;
+uint32_t tim6_at_ist;
 
 static void CounterTask(void *pvParameters);
 static void HeartbeatTask(void *pvParameters);
@@ -110,9 +115,13 @@ static void TimerServiceTask(__attribute__ ((unused)) void *pvParameters)
 	static unsigned int ctr = 0;
 	while(1)
 	{
-		if( xSemaphoreTake( ISTSemaphore, ( TickType_t ) 0xffff ) == pdTRUE )
+		if( xSemaphoreTake( ISTSemaphore, ( TickType_t ) 10 ) == pdTRUE )
 		{
-			lcd_printf(BLUE, 0, 2, LEFT_MODE, "IST COUNT %d", ctr++);
+			tim6_at_ist = TIM6->CNT;
+			lcd_printf(PINK, 0, 6, LEFT_MODE, "IST COUNT %d", ctr++);
+			lcd_printf(PINK, 0, 7, LEFT_MODE, "tim6_at_isr %d (%0.1fus)", tim6_at_isr, tim6_at_isr/160.0f);
+			lcd_printf(PINK, 0, 8, LEFT_MODE, "tim6_at_ist %d", tim6_at_ist);
+			lcd_printf(RGB_TO_ARGB(0xA2D729), 0, 9, LEFT_MODE, "tim6 delta %d", tim6_at_ist-tim6_at_isr);
 		}
 	}
 }
